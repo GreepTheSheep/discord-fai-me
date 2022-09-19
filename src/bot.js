@@ -19,15 +19,15 @@ let commands=[];
 
 client.on('ready', async () => {
     console.log(`🤖 Logged in as ${client.user.tag}!`);
-    client.user.setActivity('Bot is starting up...', {type: 'WATCHING'});
+    client.user.setActivity('/create', {type: 'WATCHING'});
 
     commands = require('./fetchAllCommands')();
 
     // Register commands
-    await require('./registerCommandsScript')(null, client.user.id, []);
-    client.guilds.cache.forEach(async (guild) => {
-        await require('./registerCommandsScript')(guild.id, client.user.id, commands);
-    });
+    await require('./registerCommandsScript')(null, client.user.id, commands);
+    // client.guilds.cache.forEach(async (guild) => {
+    //     await require('./registerCommandsScript')(guild.id, client.user.id, commands);
+    // });
 });
 
 client.on('interactionCreate', async interaction => {

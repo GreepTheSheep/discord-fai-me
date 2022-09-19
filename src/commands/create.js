@@ -1,4 +1,5 @@
 const Command = require('../structures/Command'),
+    fetch = require('node-fetch'),
     {MessageEmbed, CommandInteraction, SelectMenuInteraction, Message, MessageActionRow, MessageButton, MessageSelectMenu} = require('discord.js'),
     regionNamesInEnglish = new Intl.DisplayNames(['en'], { type: 'region' });
 
@@ -49,9 +50,9 @@ exports.args = [
     },
     {
         name: 'userpw',
-        description: 'Password of the default user',
+        description: 'Password of the default user. If not set, a password will be generated',
         type: 'string',
-        required: true
+        required: false
     },
     {
         name: 'desktop',
@@ -254,8 +255,82 @@ exports.args = [
  * @param {Command[]} commands
  */
 exports.execute = async (interaction, commands) => {
-    interaction.reply({
-        content: 'WIP',
+
+    await interaction.deferReply({
         ephemeral: interaction.options.getBoolean('private')
     });
+
+    const FAImeBaseUrl = "https://fai-project.org/cgi/faime.cgi?";
+    let URLParams = new URLSearchParams();
+    URLParams.set("type", "install");
+
+    this.args.forEach(args=>{
+        if (args.type == "string" && interaction.options.getString(args.name) != null) {
+            URLParams.set(args.name, encodeURI(interaction.options.getString(args.name)));
+        }
+    });
+
+    // required params
+
+    if (URLParams.get("partition") == null)
+        URLParams.set("partition", this.args.find(a=>a.name=="partition").choices[0].value);
+
+    if (URLParams.get("desktop") == null || interaction.options.getString("desktop") == "none")
+        URLParams.set("desktop", "");
+
+    if (URLParams.get("keyboard") == null)
+        URLParams.set("keyboard", this.args.find(a=>a.name=="keyboard").choices[0].value);
+
+    if (URLParams.get("suite") == null)
+        URLParams.set("suite", this.args.find(a=>a.name=="suite").choices[0].value);
+
+    // boolean values
+
+    if (interaction.options.getBoolean("backports"))
+        URLParams.set("cl1", "BACKPORTS");
+
+    if (interaction.options.getBoolean("debian_devel"))
+        URLParams.set("cl2", "DEBIAN_DEVEL");
+
+    if (interaction.options.getBoolean("webserver"))
+        URLParams.set("cl3", "WEBSERVER");
+
+    if (interaction.options.getBoolean("printserver"))
+        URLParams.set("cl4", "PRINTSERVER");
+
+    if (interaction.options.getBoolean("ssh_server"))
+        URLParams.set("cl5", "SSH_SERVER");
+
+    if (interaction.options.getBoolean("standard"))
+        URLParams.set("cl6", "STANDARD");
+
+    if (interaction.options.getBoolean("nonfree"))
+        URLParams.set("cl7", "NONFREE");
+
+    // Start request
+
+    /** @type {string} */
+    let res = await fetch(FAImeBaseUrl+URLParams.toString()).then(req=>req.text());
+    console.log(res);
+
+    let rawCommandsArgs = {};
+    interaction.options.data.forEach(a=>{
+        rawCommandsArgs[a.name] = a.value;
+    });
+
+    if (res.match(/([0-9A-Z,. ]*)\n<\/pre>/gmi)) {
+        let err = res.replace(/[\s\S]+?(?="\n\n)"\n\n([0-9A-Z,. ]*)\n<\/pre>/gmi, "$1");
+        console.error(interaction.member.user.tag + " requested create\n", rawCommandsArgs, "\n", err);
+        interaction.editReply({
+            content: err
+        });
+    } else {
+        let url = res.match(/url=http[s]?:\/\/fai-project.org\/myimages\/[A-Z0-9]*/gmi)[0].replace(/url=/gm, "");
+
+        console.log(interaction.member.user.tag + " requested create\n", rawCommandsArgs, "\n", url);
+
+        interaction.editReply({
+            content: "Your Image is being created, check this page for more information: " + url
+        });
+    }
 };
