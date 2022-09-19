@@ -24,6 +24,7 @@ client.on('ready', async () => {
     commands = require('./fetchAllCommands')();
 
     // Register commands
+    await require('./registerCommandsScript')(null, client.user.id, []);
     client.guilds.cache.forEach(async (guild) => {
         await require('./registerCommandsScript')(guild.id, client.user.id, commands);
     });
@@ -89,7 +90,7 @@ client.on('interactionCreate', async interaction => {
 
 client.on('guildCreate', guild=>{
     console.log('📌 New guild joined: ' + guild.name);
-    require('./registerCommandsScript')(guild.id, client.user.id, commands);
+    // require('./registerCommandsScript')(guild.id, client.user.id, commands);
 });
 
 client.on('guildDelete', guild=>{
